@@ -19,7 +19,7 @@ def process_image(input_path, output_path, logger):
                     # Save the frames as a new GIF
                     base, ext = os.path.splitext(output_path)
                     output_path = f"{base}_upscaled{ext}"
-                    frames[0].save(output_path, save_all=True, append_images=frames[1:], loop=0)
+                    frames[0].save(output_path, save_all=True, append_images=frames[1:], loop=0, transparency=255, disposal=2)
                     print(f"Processed multi-frame GIF and saved: {output_path}")
                     logger.info(f"Processed multi-frame GIF and saved: {output_path}")
             else:
@@ -44,16 +44,16 @@ def process_single_frame(img):
 
         new_width = width * scale_factor
         new_height = height * scale_factor
-        img = img.resize((new_width, new_height), Image.LINEAR)
+        img = img.resize((new_width, new_height), Image.BILINEAR)
         
         return img, True
     else:
         return img, False
 
-def process_folder(input_folder, output_folder):
+def process_folder(input_folder, output_folder, logger):
     for root, _, files in os.walk(input_folder):
         for file in files:
-            if file.lower().endswith(('.bmp', '.png', '.gif', '.jpg', '.jpeg')):
+            if file.lower().endswith(('.bmp', '.bitmap', '.png', '.gif', '.jpg', '.jpeg')):
                 input_path = os.path.join(root, file)
                 relative_path = os.path.relpath(root, input_folder)
                 output_path = os.path.join(output_folder, relative_path, file)
