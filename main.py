@@ -1,26 +1,35 @@
 import os
 import logging
-from PIL import Image
+from PIL import Image, ImageSequence
 
 def process_image(input_path, output_path, logger):
     try:
         with Image.open(input_path) as img:
             if img.format == 'GIF' and img.is_animated:
                 frames = []
+                needs_upscaling = False
                 for frame in ImageSequence.Iterator(img):
                     frame = frame.convert("RGBA")  # Convert to RGBA for uniform processing
-                    frame = process_single_frame(frame)
+                    frame, upscaled = process_single_frame(frame)
+                    if upscaled:
+                        needs_upscaling = True
                     frames.append(frame)
 
-                # Save the frames as a new GIF
-                frames[0].save(output_path, save_all=True, append_images=frames[1:], loop=0)
-                print(f"Processed multi-frame GIF and saved: {output_path}")
-                logger.info(f"Processed multi-frame GIF and saved: {output_path}")
+                if needs_upscaling:
+                    # Save the frames as a new GIF
+                    base, ext = os.path.splitext(output_path)
+                    output_path = f"{base}_upscaled{ext}"
+                    frames[0].save(output_path, save_all=True, append_images=frames[1:], loop=0)
+                    print(f"Processed multi-frame GIF and saved: {output_path}")
+                    logger.info(f"Processed multi-frame GIF and saved: {output_path}")
             else:
-                img = process_single_frame(img)
-                img.save(output_path)
-                print(f"Processed and saved: {output_path}")
-                logger.info(f"Processed and saved: {output_path}")
+                img, needs_upscaling = process_single_frame(img)
+                if needs_upscaling:
+                    base, ext = os.path.splitext(output_path)
+                    output_path = f"{base}_upscaled{ext}"
+                    img.save(output_path)
+                    print(f"Processed and saved: {output_path}")
+                    logger.info(f"Processed and saved: {output_path}")
 
     except Exception as e:
         print(f"Error processing {input_path}: {e}")
@@ -37,9 +46,9 @@ def process_single_frame(img):
         new_height = height * scale_factor
         img = img.resize((new_width, new_height), Image.LINEAR)
         
-        return img
+        return img, True
     else:
-        return img
+        return img, False
 
 def process_folder(input_folder, output_folder):
     for root, _, files in os.walk(input_folder):
